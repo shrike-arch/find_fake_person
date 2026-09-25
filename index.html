@@ -1,0 +1,1510 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>伪人鉴别专员 · 监控室</title>
+  <style>
+    :root {
+      /* 背景与卡片 */
+      --bg: #F5F6F8;
+      --card: #FFFFFF;
+      --card-shadow: 0 4px 16px rgba(15, 23, 42, 0.06);
+      --card-radius: 12px;
+      --cam-view-bg: #E8EDF2;
+      --border: #E5E7EB;
+      --border-soft: #EEF1F5;
+
+      /* 文字 */
+      --text: #1F2937;
+      --text-secondary: #6B7280;
+      --text-muted: #9CA3AF;
+
+      /* 同化条 */
+      --assim-track: #E5E7EB;
+      --assim-fill: #FFB74D;
+
+      /* 强调与状态 */
+      --accent: #5B8DEF;
+      --accent-soft: #E8F0FE;
+      --warn: #F59E0B;
+      --danger: #EF4444;
+      --success: #22C55E;
+      --rec: #EF4444;
+
+      /* 状态标签 */
+      --tag-type: #DBEAFE;
+      --tag-type-text: #1D4ED8;
+      --tag-drink: #FFEDD5;
+      --tag-drink-text: #C2410C;
+      --tag-idle: #F3F4F6;
+      --tag-idle-text: #4B5563;
+      --tag-phone: #EDE9FE;
+      --tag-phone-text: #6D28D9;
+      --tag-talk: #DCFCE7;
+      --tag-talk-text: #15803D;
+
+      /* 选中 / 标记 */
+      --selected: #5B8DEF;
+      --marked: #F59E0B;
+
+      --font: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+      --space: 1rem;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.45;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    #app {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 1.25rem 1.25rem 7.5rem;
+    }
+
+    /* —— 顶部 —— */
+    .topbar {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.85rem;
+      margin-bottom: 1rem;
+    }
+
+    .title {
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: var(--text);
+      letter-spacing: 0.02em;
+    }
+
+    .title span {
+      color: var(--text-secondary);
+      font-weight: 400;
+      font-size: 0.85rem;
+      margin-left: 0.35rem;
+    }
+
+    .assim-wrap {
+      width: min(420px, 100%);
+    }
+
+    .assim-label {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      text-align: center;
+      margin-bottom: 0.4rem;
+    }
+
+    .assim-track {
+      height: 10px;
+      background: var(--assim-track);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .assim-fill {
+      height: 100%;
+      width: 0%;
+      background: var(--assim-fill);
+      border-radius: 999px;
+      transition: width 0.5s ease;
+    }
+
+    .hint-line {
+      text-align: center;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+    }
+
+    /* —— 2×2 监控网格 —— */
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.85rem;
+    }
+
+    @media (max-width: 720px) {
+      .grid { grid-template-columns: 1fr; }
+      .hud {
+        left: 0.75rem;
+        right: 0.75rem;
+        bottom: 5.5rem;
+        justify-content: stretch;
+      }
+      .hud-card { flex: 1; }
+      #app { padding-bottom: 10rem; }
+    }
+
+    .cam {
+      background: var(--card);
+      border-radius: var(--card-radius);
+      box-shadow: var(--card-shadow);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      border: 1px solid var(--border-soft);
+      min-height: 220px;
+    }
+
+    .cam-frame {
+      margin: 0.65rem;
+      background: var(--cam-view-bg);
+      border-radius: 10px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 180px;
+      position: relative;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+
+    .cam-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.45rem 0.65rem;
+      font-size: 0.72rem;
+      color: var(--text-secondary);
+      background: rgba(255, 255, 255, 0.55);
+      backdrop-filter: blur(4px);
+    }
+
+    .cam-name { font-weight: 600; color: var(--text); }
+
+    .cam-rec {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-variant-numeric: tabular-nums;
+      color: var(--text-muted);
+    }
+
+    .rec-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--rec);
+      animation: blink 1.2s ease-in-out infinite;
+      flex-shrink: 0;
+    }
+
+    .rec-label {
+      color: var(--rec);
+      font-weight: 600;
+      font-size: 0.68rem;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.25; }
+    }
+
+    .cam-body {
+      flex: 1;
+      padding: 0.55rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      overflow: auto;
+    }
+
+    .alone-note {
+      margin: auto;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      text-align: center;
+      padding: 1rem;
+    }
+
+    /* 人物 chip */
+    .person-chip {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      width: 100%;
+      padding: 0.45rem 0.55rem;
+      border: 1.5px solid transparent;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.72);
+      cursor: pointer;
+      font: inherit;
+      color: var(--text);
+      text-align: left;
+      transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+    }
+
+    .person-chip:hover {
+      background: #fff;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+    }
+
+    .person-chip.selected {
+      border-color: var(--selected);
+      background: #fff;
+      box-shadow: 0 0 0 3px rgba(91, 141, 239, 0.18);
+    }
+
+    .person-chip.marked {
+      border-color: var(--marked);
+    }
+
+    .person-chip.marked.selected {
+      box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2);
+    }
+
+    .person-chip.moving {
+      opacity: 0.72;
+      cursor: not-allowed;
+      border-style: dashed;
+      border-color: var(--text-muted);
+      background: rgba(255, 255, 255, 0.45);
+    }
+
+    .person-chip.moving:hover {
+      box-shadow: none;
+      background: rgba(255, 255, 255, 0.45);
+    }
+
+    .person-left {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      min-width: 0;
+    }
+
+    .person-avatar {
+      font-size: 1.35rem;
+      line-height: 1;
+    }
+
+    .person-name {
+      font-weight: 600;
+      font-size: 0.88rem;
+    }
+
+    .person-sub {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .person-schedule {
+      font-size: 0.62rem;
+      color: var(--accent);
+      margin-top: 0.1rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .cam-footer {
+      border-top: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.7);
+      padding: 0.35rem 0.5rem;
+      font-size: 0.68rem;
+      color: var(--text-secondary);
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+      min-height: 1.6rem;
+    }
+
+    .cam-footer .foot-line {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .cam-footer .foot-line.moving {
+      color: var(--warn);
+    }
+
+    .cam-footer .empty {
+      color: var(--text-muted);
+    }
+
+    .schedule-list {
+      font-size: 0.8rem;
+      line-height: 1.55;
+      color: var(--text);
+    }
+
+    .schedule-list .now {
+      font-weight: 600;
+      color: var(--accent);
+    }
+
+    .status-tag {
+      flex-shrink: 0;
+      font-size: 0.68rem;
+      font-weight: 500;
+      padding: 0.18rem 0.45rem;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+
+    .status-tag.type { background: var(--tag-type); color: var(--tag-type-text); }
+    .status-tag.drink { background: var(--tag-drink); color: var(--tag-drink-text); }
+    .status-tag.idle { background: var(--tag-idle); color: var(--tag-idle-text); }
+    .status-tag.phone { background: var(--tag-phone); color: var(--tag-phone-text); }
+    .status-tag.talk { background: var(--tag-talk); color: var(--tag-talk-text); }
+
+    /* 朋友圈流 */
+    .feed {
+      flex: 1;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .feed-track {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      animation: scrollFeed 30s linear infinite;
+    }
+
+    @keyframes scrollFeed {
+      0% { transform: translateY(0); }
+      100% { transform: translateY(-50%); }
+    }
+
+    .feed-item {
+      background: rgba(255, 255, 255, 0.75);
+      border-radius: 8px;
+      padding: 0.4rem 0.55rem;
+      font-size: 0.75rem;
+      color: var(--text);
+      border-left: 3px solid var(--accent);
+    }
+
+    .feed-item.humanish {
+      border-left-color: var(--warn);
+    }
+
+    .feed-item .who {
+      color: var(--text-secondary);
+      font-weight: 600;
+      margin-right: 0.25rem;
+    }
+
+    /* —— 底部操作栏 —— */
+    .action-bar {
+      position: fixed;
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: 1rem;
+      z-index: 40;
+      width: min(720px, calc(100% - 2rem));
+      background: var(--card);
+      border-radius: 16px;
+      box-shadow: 0 8px 28px rgba(15, 23, 42, 0.1);
+      border: 1px solid var(--border-soft);
+      padding: 0.65rem 0.85rem;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .action-target {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      margin-right: auto;
+      min-width: 7rem;
+    }
+
+    .action-target strong { color: var(--text); }
+
+    .action-bar button {
+      font: inherit;
+      font-size: 0.8rem;
+      font-weight: 500;
+      padding: 0.45rem 0.85rem;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--text);
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+
+    .action-bar button:hover:not(:disabled) {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+      color: var(--tag-type-text);
+    }
+
+    .action-bar button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .action-bar button.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    .action-bar button.primary:hover:not(:disabled) {
+      filter: brightness(1.05);
+      color: #fff;
+    }
+
+    .action-bar button.warn {
+      border-color: #FCD34D;
+      background: #FFFBEB;
+      color: #B45309;
+    }
+
+    /* —— 右下状态小卡片 —— */
+    .hud {
+      position: fixed;
+      right: 1.25rem;
+      bottom: 5.25rem;
+      z-index: 35;
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .hud-card {
+      background: var(--card);
+      border-radius: 12px;
+      box-shadow: var(--card-shadow);
+      border: 1px solid var(--border-soft);
+      padding: 0.55rem 0.75rem;
+      min-width: 5.5rem;
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+    }
+
+    .hud-card .icon { font-size: 0.95rem; }
+    .hud-card strong {
+      color: var(--text);
+      font-size: 0.95rem;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .hud-card.urgent strong { color: var(--danger); }
+
+    /* —— 弹层 —— */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.28);
+      z-index: 80;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+
+    .overlay.show { display: flex; }
+
+    .modal {
+      width: min(480px, 100%);
+      background: var(--card);
+      border-radius: 16px;
+      box-shadow: 0 16px 48px rgba(15, 23, 42, 0.12);
+      padding: 1.15rem 1.25rem;
+      max-height: 88vh;
+      overflow-y: auto;
+      border: 1px solid var(--border-soft);
+    }
+
+    .modal h2 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 0.65rem;
+    }
+
+    .modal .section {
+      margin: 0.55rem 0;
+      font-size: 0.85rem;
+      border-top: 1px solid var(--border);
+      padding-top: 0.5rem;
+    }
+
+    .modal .section label {
+      display: block;
+      color: var(--text-muted);
+      font-size: 0.72rem;
+      margin-bottom: 0.2rem;
+    }
+
+    .modal-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      margin-top: 0.9rem;
+    }
+
+    .modal-actions button {
+      font: inherit;
+      font-size: 0.8rem;
+      padding: 0.45rem 0.9rem;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    .modal-actions button.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    .qa-box {
+      margin-top: 0.5rem;
+      padding: 0.65rem 0.75rem;
+      background: var(--bg);
+      border-radius: 10px;
+      font-size: 0.82rem;
+      display: none;
+    }
+
+    .qa-box.show { display: block; }
+    .qa-box .q { color: var(--warn); margin-bottom: 0.35rem; font-weight: 500; }
+    .qa-box .a { color: var(--text); }
+
+    .submit-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      margin: 0.35rem 0;
+      font-size: 0.85rem;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .submit-row select {
+      font: inherit;
+      font-size: 0.8rem;
+      background: var(--bg);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.3rem 0.5rem;
+    }
+
+    .ending-title {
+      font-size: 1.15rem;
+      color: var(--text);
+      font-weight: 600;
+      margin: 0.35rem 0 0.65rem;
+    }
+
+    .ending-body {
+      font-size: 0.88rem;
+      line-height: 1.6;
+      color: var(--text-secondary);
+      white-space: pre-wrap;
+    }
+
+    .ending-body .mock {
+      display: block;
+      margin-top: 0.85rem;
+      padding: 0.75rem;
+      background: #FFF7ED;
+      border-radius: 10px;
+      color: #9A3412;
+      border: 1px solid #FED7AA;
+    }
+
+    .reveal-line {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin: 0.25rem 0;
+    }
+  </style>
+</head>
+<body>
+  <script>
+    // ========== 可调参数（难度） ==========
+    const ROUND_COUNT = 6;
+    const ROUND_TIME = 30;          // 每回合秒数
+    const CHARACTER_COUNT = 5;
+    const FAKE_COUNT = 1;
+    const DISGUISED_COUNT = 1;
+    const ASSIMILATION_MAX = 100;
+    const ASSIMILATION_PER_ROUND = 8; // 每回合结束 +8%
+    const MIN_STAY_TIME = 15;       // 每区域最短停留（秒）
+    const MOVE_DURATION = 2;        // 移动动画时长（秒）
+    // =====================================
+  </script>
+
+  <div id="app">
+    <header class="topbar">
+      <h1 class="title">伪人鉴别专员<span>智能监控室</span></h1>
+      <div class="assim-wrap">
+        <div class="assim-label" id="assim-label">社会时钟同化率 0%</div>
+        <div class="assim-track"><div class="assim-fill" id="assim-fill"></div></div>
+      </div>
+    </header>
+
+    <p class="hint-line">
+      每人有今日时间表，区域停留至少 <span id="hint-stay">15</span>s。点人选中后观察 / 提问 / 标记。共 <span id="hint-rounds">6</span> 回合。
+    </p>
+
+    <div class="grid">
+      <section class="cam">
+        <div class="cam-frame">
+          <div class="cam-head">
+            <span class="cam-name">CAM 01 - 工位区</span>
+            <span class="cam-rec"><span class="rec-dot"></span><span class="rec-label">REC</span> <span data-ts></span></span>
+          </div>
+          <div class="cam-body" id="desk-body"></div>
+          <div class="cam-footer" id="desk-footer"></div>
+        </div>
+      </section>
+
+      <section class="cam">
+        <div class="cam-frame">
+          <div class="cam-head">
+            <span class="cam-name">CAM 02 - 茶水间</span>
+            <span class="cam-rec"><span class="rec-dot"></span><span class="rec-label">REC</span> <span data-ts></span></span>
+          </div>
+          <div class="cam-body" id="pantry-body"></div>
+          <div class="cam-footer" id="pantry-footer"></div>
+        </div>
+      </section>
+
+      <section class="cam">
+        <div class="cam-frame">
+          <div class="cam-head">
+            <span class="cam-name">CAM 03 - 朋友圈流</span>
+            <span class="cam-rec"><span class="rec-dot"></span><span class="rec-label">REC</span> <span data-ts></span></span>
+          </div>
+          <div class="cam-body">
+            <div class="feed" id="moments-feed"><div class="feed-track" id="moments-track"></div></div>
+          </div>
+          <div class="cam-footer"><span class="empty">动态滚动中</span></div>
+        </div>
+      </section>
+
+      <section class="cam">
+        <div class="cam-frame">
+          <div class="cam-head">
+            <span class="cam-name">CAM 04 - 会议室</span>
+            <span class="cam-rec"><span class="rec-dot"></span><span class="rec-label">REC</span> <span data-ts></span></span>
+          </div>
+          <div class="cam-body" id="meet-body"></div>
+          <div class="cam-footer" id="meet-footer"></div>
+        </div>
+      </section>
+    </div>
+
+    <aside class="hud">
+      <div class="hud-card">
+        <span class="icon">🔁</span>
+        回合 <strong id="hud-round">1</strong>/<span id="hud-round-max">6</span>
+      </div>
+      <div class="hud-card" id="hud-time-card">
+        <span class="icon">⏱️</span>
+        剩余 <strong id="hud-time">30</strong>s
+      </div>
+      <div class="hud-card">
+        <span class="icon">🏷️</span>
+        已标记 <strong id="hud-marks">0</strong> 人
+      </div>
+    </aside>
+
+    <div class="action-bar">
+      <div class="action-target" id="action-target">未选中对象</div>
+      <button type="button" id="btn-observe" disabled>观察</button>
+      <button type="button" id="btn-ask" disabled>提问</button>
+      <button type="button" id="btn-mark" class="warn" disabled>标记</button>
+      <button type="button" id="btn-skip">结束本回合</button>
+      <button type="button" id="btn-submit" class="primary" style="display:none">提交名单</button>
+    </div>
+  </div>
+
+  <!-- 观察 / 提问结果 -->
+  <div class="overlay" id="detail-modal">
+    <div class="modal">
+      <h2 id="dm-title">观察详情</h2>
+      <div id="dm-preview" class="section" style="border-top:none;padding-top:0"></div>
+      <div class="qa-box" id="dm-qa">
+        <div class="q" id="dm-q"></div>
+        <div class="a" id="dm-a"></div>
+      </div>
+      <div class="section" id="dm-detail" style="display:none"></div>
+      <div class="modal-actions">
+        <button type="button" id="dm-close">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay" id="submit-modal">
+    <div class="modal submit-panel">
+      <h2>最终举报名单</h2>
+      <p class="hint-line" style="text-align:left;margin:0 0 0.5rem">
+        伪人应选 <span id="sub-fake-need">1</span> 人；伪装者应指出 <span id="sub-dis-need">1</span> 人。
+      </p>
+      <div id="submit-list"></div>
+      <div class="modal-actions">
+        <button type="button" id="btn-confirm-submit" class="primary">确认提交</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay" id="ending-modal">
+    <div class="modal ending-panel">
+      <h2>本案结束</h2>
+      <div class="ending-title" id="ending-title"></div>
+      <div class="ending-body" id="ending-body"></div>
+      <div id="ending-reveal" style="margin-top:0.85rem"></div>
+      <div class="modal-actions">
+        <button type="button" id="btn-restart" class="primary">重新监控</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const NAMES = ["林晓", "陈默", "周予", "韩叙", "苏晚", "顾言", "沈星", "叶知", "方晴", "江澄"];
+
+    const QUESTIONS = [
+      "你周末一般干什么？",
+      "最近有什么想买但觉得没必要的东西吗？",
+      "如果不用考虑收入，你最想做什么？",
+      "你讨厌什么？",
+      "昨晚几点睡的？做了什么？"
+    ];
+
+    const FAKE_PROFILE = {
+      typing: "打字节奏完全匀速，从不停顿，像节拍器。",
+      drink: "每隔固定秒数喝一次水，误差小于 1 秒。",
+      speech: "发言全是正能量 / 主流 / 正确句，没有一句废话。",
+      moments: ["今日打卡✔自律的一天", "正能量：努力的人运气不会差", "人脉午餐，收获满满", "考研资料整理完毕，继续前进"],
+      ask: () => ({
+        hesitation: false,
+        answer: pick([
+          "按计划提升自己，保持自律。",
+          "做对人生有益的事：学习、运动、复盘。",
+          "跟随正确节奏就好，没有特别想的。",
+          "考公 / 稳定 / 长期主义，答案很清楚。"
+        ])
+      }),
+      actions: ["💻", "☕", "🗣️"]
+    };
+
+    const REAL_PROFILE = {
+      typing: "打字会停顿，偶尔删了重打，光标闪很久。",
+      drink: "喝水时间完全不固定，有时一杯摆整天。",
+      speech: "发言里有矛盾、犹豫或自嘲。",
+      moments: [
+        "凌晨三点吃泡面，盐多分外香",
+        "讨厌周一。真的。",
+        "发呆了四十分钟，什么都没想起来",
+        "买了没用的小东西，有点后悔又没有"
+      ],
+      ask: () => ({
+        hesitation: true,
+        answer: pick([
+          "啊？我其实也没想好……",
+          "这个……等下，我组织一下语言。",
+          "说出来有点矛盾，我自己也觉得怪。",
+          "哈哈，可能跟大家想的不太一样。"
+        ])
+      }),
+      actions: ["💻", "☕", "😴", "📱", "🗣️"]
+    };
+
+    const DISGUISED_PROFILE = {
+      typing: "表面打字很稳，但细看：速度忽快忽慢，像在演戏。",
+      drink: "故意每隔一会儿喝水——但有一次忘了，慌忙补喝。",
+      speech: "口头说「我觉得考公是唯一出路」，语气过于用力。",
+      moments: ["今日打卡✔继续自律", "正能量满满，周一也要加油", "凌晨三点吃泡面"],
+      ask: () => ({
+        hesitation: true,
+        answer: pick([
+          "考公是唯一出路。——啊不对，我是说比较稳妥。",
+          "按计划走……（摸了摸鼻子）没什么犹豫的。",
+          "标准答案？我给你标准答案。咳，就是……稳定。"
+        ])
+      }),
+      tells: ["说话时会摸鼻子。", "打字速度忽快忽慢。", "朋友圈里混进过「凌晨三点吃泡面」。"],
+      actions: ["💻", "☕", "🗣️", "📱"],
+      surfaceLine: "我觉得考公是唯一出路。"
+    };
+
+    const LOCATIONS = ["desk", "pantry", "meet"];
+    const LOC_LABEL = { desk: "工位区", pantry: "茶水间", meet: "会议室" };
+
+    let characters = [];
+    let marked = new Set();
+    let round = 1;
+    let timeLeft = ROUND_TIME;
+    let assimilation = 0;
+    let phase = "play";
+    let selectedId = null;
+    let timerId = null;
+    let worldId = null;
+    let asked = {};
+
+    const deskBody = document.getElementById("desk-body");
+    const pantryBody = document.getElementById("pantry-body");
+    const meetBody = document.getElementById("meet-body");
+    const momentsTrack = document.getElementById("moments-track");
+    const deskFooter = document.getElementById("desk-footer");
+    const pantryFooter = document.getElementById("pantry-footer");
+    const meetFooter = document.getElementById("meet-footer");
+
+    function pick(arr) {
+      return arr[Math.floor(Math.random() * arr.length)];
+    }
+
+    function shuffle(arr) {
+      const a = arr.slice();
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+
+    function formatClock(totalMin) {
+      const h = Math.floor(totalMin / 60) % 24;
+      const m = totalMin % 60;
+      return String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0");
+    }
+
+    /** 今日时间表：真实停留 ≥ MIN_STAY_TIME；显示时钟 1秒=1分钟 */
+    function buildSchedule() {
+      const pattern = shuffle([
+        "desk", "pantry", "meet", "desk", "pantry", "meet", "desk"
+      ]);
+      const segs = [];
+      let clockMin = 9 * 60;
+      let prev = null;
+      for (let i = 0; i < 6; i++) {
+        let loc = pattern[i];
+        if (loc === prev) loc = LOCATIONS.find((l) => l !== prev) || loc;
+        const stay = MIN_STAY_TIME + Math.floor(Math.random() * 6);
+        segs.push({
+          loc,
+          duration: stay,
+          startLabel: formatClock(clockMin),
+          endLabel: formatClock(clockMin + stay)
+        });
+        clockMin += stay;
+        prev = loc;
+      }
+      return segs;
+    }
+
+    function scheduleHtml(c, highlightIndex) {
+      return (
+        `<div class="schedule-list">` +
+        c.schedule
+          .map((s, i) => {
+            const cls = i === highlightIndex ? ' class="now"' : "";
+            return `<div${cls}>${s.startLabel}-${s.endLabel} ${LOC_LABEL[s.loc]}</div>`;
+          })
+          .join("") +
+        `</div>`
+      );
+    }
+
+    function nextSegment(c) {
+      return c.schedule[(c.segIndex + 1) % c.schedule.length];
+    }
+
+    function validateConfig() {
+      if (FAKE_COUNT + DISGUISED_COUNT >= CHARACTER_COUNT || FAKE_COUNT < 1 || DISGUISED_COUNT < 1) {
+        alert("配置错误：FAKE_COUNT + DISGUISED_COUNT 须 < CHARACTER_COUNT，且二者 ≥ 1");
+        return false;
+      }
+      if (CHARACTER_COUNT > NAMES.length) {
+        alert("CHARACTER_COUNT 超过姓名池");
+        return false;
+      }
+      return true;
+    }
+
+    function buildCharacters() {
+      const names = shuffle(NAMES).slice(0, CHARACTER_COUNT);
+      const types = shuffle([
+        ...Array(FAKE_COUNT).fill("fake"),
+        ...Array(DISGUISED_COUNT).fill("disguised"),
+        ...Array(CHARACTER_COUNT - FAKE_COUNT - DISGUISED_COUNT).fill("real")
+      ]);
+
+      characters = names.map((name, i) => {
+        const type = types[i];
+        const profile =
+          type === "fake" ? FAKE_PROFILE : type === "disguised" ? DISGUISED_PROFILE : REAL_PROFILE;
+
+        const moments = shuffle(profile.moments).slice(0, 3).map((text) => ({
+          text,
+          humanish: /泡面|讨厌|发呆|没用|后悔|凌晨/.test(text)
+        }));
+
+        const schedule = buildSchedule();
+        const first = schedule[0];
+
+        return {
+          id: i,
+          name,
+          type,
+          profile,
+          schedule,
+          segIndex: 0,
+          location: first.loc,
+          stayLeft: first.duration,
+          moving: false,
+          moveLeft: 0,
+          moveFrom: null,
+          moveTo: null,
+          action: pick(profile.actions),
+          sipTimer: type === "fake" || type === "disguised" ? 8 + (i % 3) : 4 + Math.random() * 12,
+          sipEvery: type === "fake" ? 8 : type === "disguised" ? 9 : null,
+          speechLine:
+            type === "fake"
+              ? pick(["保持正能量。", "打卡完成。", "按计划推进。", "人脉很重要。"])
+              : type === "disguised"
+                ? DISGUISED_PROFILE.surfaceLine
+                : pick(["嗯……随便吧。", "今天好困。", "这话我反悔了。", "我其实也没想好。"]),
+          moments,
+          pantryMode: Math.random() > 0.45 ? "chat" : "alone",
+          meetMode: Math.random() > 0.4 ? "meet" : "slack"
+        };
+      });
+    }
+
+    function startGame() {
+      if (!validateConfig()) return;
+      document.getElementById("hint-rounds").textContent = String(ROUND_COUNT);
+      document.getElementById("hint-stay").textContent = String(MIN_STAY_TIME);
+      document.getElementById("hud-round-max").textContent = String(ROUND_COUNT);
+      document.getElementById("sub-fake-need").textContent = String(FAKE_COUNT);
+      document.getElementById("sub-dis-need").textContent = String(DISGUISED_COUNT);
+
+      marked = new Set();
+      round = 1;
+      timeLeft = ROUND_TIME;
+      assimilation = 0;
+      phase = "play";
+      selectedId = null;
+      asked = {};
+      clearInterval(timerId);
+      clearInterval(worldId);
+
+      hideOverlay("detail-modal");
+      hideOverlay("submit-modal");
+      hideOverlay("ending-modal");
+      document.getElementById("btn-submit").style.display = "none";
+      document.getElementById("btn-skip").style.display = "";
+
+      buildCharacters();
+      updateAssimUI();
+      updateActionBar();
+      updateHud();
+      renderAll();
+      startRoundTimer();
+      startWorldTick();
+    }
+
+    function startRoundTimer() {
+      clearInterval(timerId);
+      timeLeft = ROUND_TIME;
+      updateHud();
+      timerId = setInterval(() => {
+        if (phase !== "play") return;
+        timeLeft -= 1;
+        updateHud();
+        if (timeLeft <= 0) endRound();
+      }, 1000);
+    }
+
+    function startWorldTick() {
+      clearInterval(worldId);
+      worldId = setInterval(() => {
+        if (phase !== "play") return;
+        tickWorld();
+        renderCams();
+        updateTimestamps();
+        updateActionBar();
+      }, 1000);
+    }
+
+    function beginMove(c) {
+      const nxt = nextSegment(c);
+      if (nxt.loc === c.location) {
+        c.segIndex = (c.segIndex + 1) % c.schedule.length;
+        c.stayLeft = c.schedule[c.segIndex].duration;
+        c.moving = false;
+        return;
+      }
+      c.moving = true;
+      c.moveFrom = c.location;
+      c.moveTo = nxt.loc;
+      c.moveLeft = MOVE_DURATION;
+      if (selectedId === c.id) selectedId = null;
+    }
+
+    function finishMove(c) {
+      c.segIndex = (c.segIndex + 1) % c.schedule.length;
+      c.location = c.schedule[c.segIndex].loc;
+      c.stayLeft = c.schedule[c.segIndex].duration;
+      c.moving = false;
+      c.moveLeft = 0;
+      c.moveFrom = null;
+      c.moveTo = null;
+      c.action = pick(c.profile.actions);
+    }
+
+    function tickWorld() {
+      characters.forEach((c) => {
+        if (c.moving) {
+          c.moveLeft -= 1;
+          if (c.moveLeft <= 0) finishMove(c);
+          return;
+        }
+
+        c.stayLeft -= 1;
+        if (c.stayLeft <= 0) {
+          beginMove(c);
+          return;
+        }
+
+        if (c.type === "fake") {
+          if (Math.random() < 0.35) c.action = pick(["💻", "☕", "🗣️"]);
+          if (c.sipEvery) {
+            c.sipTimer -= 1;
+            if (c.sipTimer <= 0) {
+              c.action = "☕";
+              c.sipTimer = c.sipEvery;
+            }
+          }
+        } else if (c.type === "disguised") {
+          if (Math.random() < 0.35) c.action = pick(DISGUISED_PROFILE.actions);
+        } else if (Math.random() < 0.4) {
+          c.action = pick(REAL_PROFILE.actions);
+        }
+
+        if (Math.random() < 0.2) c.pantryMode = Math.random() > 0.5 ? "chat" : "alone";
+        if (Math.random() < 0.2) c.meetMode = Math.random() > 0.45 ? "meet" : "slack";
+      });
+    }
+
+    function updateTimestamps() {
+      const now = new Date();
+      const ts = now.toLocaleTimeString("zh-CN", { hour12: false });
+      document.querySelectorAll("[data-ts]").forEach((el) => {
+        el.textContent = ts;
+      });
+    }
+
+    function updateAssimUI() {
+      const pct = Math.min(100, Math.round((assimilation / ASSIMILATION_MAX) * 100));
+      document.getElementById("assim-fill").style.width = pct + "%";
+      document.getElementById("assim-label").textContent = "社会时钟同化率 " + pct + "%";
+    }
+
+    function updateHud() {
+      document.getElementById("hud-round").textContent = String(round);
+      document.getElementById("hud-time").textContent = String(Math.max(0, timeLeft));
+      document.getElementById("hud-marks").textContent = String(marked.size);
+      document.getElementById("hud-time-card").classList.toggle("urgent", timeLeft <= 5);
+    }
+
+    function updateActionBar() {
+      const target = document.getElementById("action-target");
+      const c = selectedId !== null ? characters.find((x) => x.id === selectedId) : null;
+      const has = phase === "play" && c && !c.moving;
+      document.getElementById("btn-observe").disabled = !has;
+      document.getElementById("btn-ask").disabled = !has;
+      document.getElementById("btn-mark").disabled = !has;
+
+      if (!c) {
+        target.innerHTML = "未选中对象";
+        document.getElementById("btn-mark").textContent = "标记";
+        return;
+      }
+      if (c.moving) {
+        target.innerHTML = `<strong>${c.name}</strong> 移动中，暂不可操作`;
+        return;
+      }
+      target.innerHTML = `当前：<strong>${c.action} ${c.name}</strong>（剩余 ${c.stayLeft}s）`;
+      document.getElementById("btn-mark").textContent = marked.has(c.id) ? "取消标记" : "标记";
+    }
+
+    function renderAll() {
+      renderCams();
+      renderMoments();
+      updateTimestamps();
+      updateHud();
+      updateActionBar();
+    }
+
+    function statusMeta(action) {
+      const map = {
+        "💻": { cls: "type", label: "💻 打字中" },
+        "☕": { cls: "drink", label: "☕ 喝水" },
+        "😴": { cls: "idle", label: "😴 发呆" },
+        "📱": { cls: "phone", label: "📱 刷手机" },
+        "🗣️": { cls: "talk", label: "🗣️ 说话中" },
+        "🚶": { cls: "idle", label: "🚶 移动中" }
+      };
+      return map[action] || { cls: "idle", label: action + " 活动中" };
+    }
+
+    function locName(loc) {
+      return LOC_LABEL[loc] || loc;
+    }
+
+    function displayLoc(c) {
+      return c.moving ? c.moveFrom : c.location;
+    }
+
+    function chipHtml(c) {
+      const sel = selectedId === c.id ? " selected" : "";
+      const mark = marked.has(c.id) ? " marked" : "";
+      const moving = c.moving ? " moving" : "";
+      const nxt = nextSegment(c);
+      const cur = c.schedule[c.segIndex];
+
+      if (c.moving) {
+        return `<button type="button" class="person-chip${moving}${mark}" data-id="${c.id}" disabled>
+          <span class="person-left">
+            <span class="person-avatar">🚶</span>
+            <span>
+              <div class="person-name">${c.name}</div>
+              <div class="person-sub">正在前往${locName(c.moveTo)}…（${c.moveLeft}s）</div>
+              <div class="person-schedule">时间表 ${cur.startLabel}-${cur.endLabel} → ${nxt.startLabel} ${locName(nxt.loc)}</div>
+            </span>
+          </span>
+          <span class="status-tag idle">🚶 移动中</span>
+        </button>`;
+      }
+
+      const st = statusMeta(c.action);
+      return `<button type="button" class="person-chip${sel}${mark}" data-id="${c.id}">
+        <span class="person-left">
+          <span class="person-avatar">${c.action}</span>
+          <span>
+            <div class="person-name">${c.name}</div>
+            <div class="person-sub">${locName(c.location)}（剩余 ${c.stayLeft}s）</div>
+            <div class="person-schedule">📅 ${cur.startLabel}-${cur.endLabel} · 下站 ${nxt.startLabel} ${locName(nxt.loc)}</div>
+          </span>
+        </span>
+        <span class="status-tag ${st.cls}">${st.label}</span>
+      </button>`;
+    }
+
+    function footerHtml(list) {
+      if (!list.length) return `<span class="empty">暂无人员</span>`;
+      return list
+        .map((c) => {
+          if (c.moving) {
+            return `<div class="foot-line moving">${c.name} 🚶 正在前往${locName(c.moveTo)}…</div>`;
+          }
+          return `<div class="foot-line">${c.name} ${c.action} ${locName(c.location)}（剩余 ${c.stayLeft}s）</div>`;
+        })
+        .join("");
+    }
+
+    function renderCams() {
+      const desk = characters.filter((c) => displayLoc(c) === "desk");
+      const pantry = characters.filter((c) => displayLoc(c) === "pantry");
+      const meet = characters.filter((c) => displayLoc(c) === "meet");
+
+      deskBody.innerHTML =
+        desk.map((c) => chipHtml(c)).join("") || `<div class="alone-note">暂无人员</div>`;
+      pantryBody.innerHTML =
+        pantry.map((c) => chipHtml(c)).join("") || `<div class="alone-note">暂无人员</div>`;
+      meetBody.innerHTML =
+        meet.map((c) => chipHtml(c)).join("") || `<div class="alone-note">暂无人员</div>`;
+
+      deskFooter.innerHTML = footerHtml(desk);
+      pantryFooter.innerHTML = footerHtml(pantry);
+      meetFooter.innerHTML = footerHtml(meet);
+
+      document.querySelectorAll(".person-chip:not([disabled])").forEach((el) => {
+        el.addEventListener("click", () => selectPerson(Number(el.dataset.id)));
+      });
+    }
+
+    function renderMoments() {
+      const items = [];
+      characters.forEach((c) => {
+        c.moments.forEach((m) => items.push({ name: c.name, ...m }));
+      });
+      const list = shuffle(items);
+      const html = list
+        .map(
+          (m) =>
+            `<div class="feed-item${m.humanish ? " humanish" : ""}">
+              <span class="who">${m.name}</span>${m.text}
+            </div>`
+        )
+        .join("");
+      momentsTrack.innerHTML = html + html;
+    }
+
+    function selectPerson(id) {
+      if (phase !== "play") return;
+      const c = characters.find((x) => x.id === id);
+      if (!c || c.moving) return;
+      selectedId = id;
+      updateActionBar();
+      renderCams();
+    }
+
+    function openDetailShell(c) {
+      document.getElementById("dm-title").textContent = c.name;
+      document.getElementById("dm-preview").innerHTML = `
+        <label>当前状态</label>
+        <div>${c.moving ? "🚶 移动中" : statusMeta(c.action).label} · ${locName(c.location)}
+          ${c.moving ? "" : `（剩余 ${c.stayLeft}s）`}</div>
+        <label style="margin-top:0.4rem">近距收音</label>
+        <div>「${c.speechLine}」</div>
+        <label style="margin-top:0.4rem">今日时间表</label>
+        ${scheduleHtml(c, c.segIndex)}
+      `;
+      document.getElementById("dm-detail").style.display = "none";
+      document.getElementById("dm-detail").innerHTML = "";
+      const qa = document.getElementById("dm-qa");
+      if (asked[c.id]) {
+        qa.classList.add("show");
+        document.getElementById("dm-q").textContent = "问：" + asked[c.id].q;
+        document.getElementById("dm-a").textContent =
+          (asked[c.id].hesitation ? "（停顿片刻） " : "（几乎无停顿） ") + asked[c.id].a;
+      } else {
+        qa.classList.remove("show");
+      }
+      showOverlay("detail-modal");
+    }
+
+    function observeSelected() {
+      if (selectedId === null) return;
+      const c = characters.find((x) => x.id === selectedId);
+      if (!c || c.moving) return;
+      openDetailShell(c);
+      const p = c.profile;
+      let tells = "";
+      if (c.type === "disguised") {
+        tells = `<label style="margin-top:0.4rem">异常细节</label><div>${DISGUISED_PROFILE.tells
+          .map((t) => "· " + t)
+          .join("<br>")}</div>`;
+      }
+      const el = document.getElementById("dm-detail");
+      el.style.display = "block";
+      el.innerHTML = `
+        <label>微表情 / 动作</label>
+        <div>${p.typing}<br>${p.drink}</div>
+        <label style="margin-top:0.4rem">发言特征</label>
+        <div>${p.speech}</div>
+        <label style="margin-top:0.4rem">朋友圈抽样</label>
+        <div>${c.moments.map((m) => "· " + m.text).join("<br>")}</div>
+        ${tells}
+      `;
+    }
+
+    function askSelected() {
+      if (selectedId === null) return;
+      const c = characters.find((x) => x.id === selectedId);
+      if (!c || c.moving) return;
+      const q = pick(QUESTIONS);
+      const res = c.profile.ask(q);
+      asked[c.id] = { q, a: res.answer, hesitation: res.hesitation };
+      openDetailShell(c);
+      document.getElementById("dm-qa").classList.add("show");
+      document.getElementById("dm-q").textContent = "问：" + q;
+      document.getElementById("dm-a").textContent =
+        (res.hesitation ? "（停顿片刻，眼神游移） " : "（抢答，语调平稳） ") + res.answer;
+    }
+
+    function toggleMarkSelected() {
+      if (selectedId === null) return;
+      const c = characters.find((x) => x.id === selectedId);
+      if (!c || c.moving) return;
+      if (marked.has(selectedId)) marked.delete(selectedId);
+      else marked.add(selectedId);
+      updateHud();
+      updateActionBar();
+      renderCams();
+    }
+
+    function endRound() {
+      if (phase !== "play") return;
+      clearInterval(timerId);
+
+      if (round >= ROUND_COUNT) {
+        enterSubmitPhase();
+        return;
+      }
+
+      assimilation = Math.min(ASSIMILATION_MAX, assimilation + ASSIMILATION_PER_ROUND);
+      updateAssimUI();
+
+      if (assimilation >= ASSIMILATION_MAX) {
+        triggerEnding("assim");
+        return;
+      }
+
+      round += 1;
+      renderMoments();
+      renderCams();
+      startRoundTimer();
+      updateHud();
+    }
+
+    function enterSubmitPhase() {
+      phase = "submit";
+      clearInterval(timerId);
+      selectedId = null;
+      updateActionBar();
+      document.getElementById("btn-skip").style.display = "none";
+      document.getElementById("btn-submit").style.display = "";
+      hideOverlay("detail-modal");
+      openSubmit();
+    }
+
+    function openSubmit() {
+      const list = document.getElementById("submit-list");
+      list.innerHTML = characters
+        .map((c) => {
+          const pre = marked.has(c.id) ? "🏷️ " : "";
+          return `<div class="submit-row">
+            <span>${pre}${c.name}</span>
+            <select data-id="${c.id}">
+              <option value="clear">放过（正常人）</option>
+              <option value="fake"${marked.has(c.id) ? " selected" : ""}>举报：伪人</option>
+              <option value="disguised">指出：伪装者</option>
+            </select>
+          </div>`;
+        })
+        .join("");
+      showOverlay("submit-modal");
+    }
+
+    function confirmSubmit() {
+      const verdict = {};
+      document.querySelectorAll("#submit-list select").forEach((sel) => {
+        verdict[Number(sel.dataset.id)] = sel.value;
+      });
+
+      const reportedFake = characters.filter((c) => verdict[c.id] === "fake").map((c) => c.id);
+      const reportedDis = characters.filter((c) => verdict[c.id] === "disguised").map((c) => c.id);
+      const actualFake = characters.filter((c) => c.type === "fake").map((c) => c.id);
+      const actualDis = characters.filter((c) => c.type === "disguised").map((c) => c.id);
+      const actualReal = characters.filter((c) => c.type === "real").map((c) => c.id);
+
+      const fakeSet = new Set(actualFake);
+      const disSet = new Set(actualDis);
+      const realSet = new Set(actualReal);
+
+      const allFakesFound = actualFake.every((id) => reportedFake.includes(id));
+      const disguisedFound =
+        actualDis.length > 0 &&
+        actualDis.every((id) => reportedDis.includes(id)) &&
+        reportedDis.every((id) => disSet.has(id));
+
+      const reportedDisguisedAsFake = reportedFake.some((id) => disSet.has(id));
+      const hurtReal =
+        reportedFake.some((id) => realSet.has(id)) ||
+        reportedDis.some((id) => realSet.has(id) || fakeSet.has(id));
+
+      let kind;
+      if (hurtReal) kind = "hr";
+      else if (allFakesFound && disguisedFound) kind = "perfect";
+      else if (allFakesFound && !disguisedFound) kind = "ghost";
+      else kind = "hr";
+
+      triggerEnding(kind, { reportedDisguisedAsFake });
+    }
+
+    function triggerEnding(kind, extra = {}) {
+      phase = "end";
+      clearInterval(timerId);
+      clearInterval(worldId);
+      hideOverlay("detail-modal");
+      hideOverlay("submit-modal");
+
+      const endings = {
+        perfect: {
+          title: "《你看见了空心人》",
+          body: "名单吻合。那些匀速喝水、匀速打字、匀速正确的影子被你拆开了。\n伪装者也被认了出来——不是空心，只是太会演。"
+        },
+        ghost: {
+          title: "《你抓到了鬼，但放过了人》",
+          body: "伪人已被隔离。可有人把「正确」穿在身上，只为了在社会时钟里活命。\n你放走了伪装者。"
+        },
+        hr: {
+          title: "《你变成了HR》",
+          body: "误伤发生了。你开始用模板衡量活人：停顿是风险，废话是异常，矛盾是不合格。"
+        },
+        assim: {
+          title: "《周一见》",
+          body: "同化率已满。你盯屏幕太久，开始觉得打卡很合理，犹豫很可耻。\n门外有人敲门：周一见。"
+        }
+      };
+
+      const e = endings[kind] || endings.hr;
+      document.getElementById("ending-title").textContent = e.title;
+
+      let body = e.body;
+      if (extra.reportedDisguisedAsFake) {
+        const d = characters.find((c) => c.type === "disguised");
+        body += `\n\n<span class="mock">【伪装者 ${d.name} 的嘲讽】\n「恭喜，你成功举报了一个会摸鼻子的活人。我只是演得像你们喜欢的样子。」</span>`;
+      } else if (kind === "ghost") {
+        const d = characters.find((c) => c.type === "disguised");
+        body += `\n\n<span class="mock">【伪装者 ${d.name} 揭晓】\n「我只是想活得像个人样。」</span>`;
+      }
+
+      document.getElementById("ending-body").innerHTML = body;
+      document.getElementById("ending-reveal").innerHTML = characters
+        .map((c) => {
+          const tag =
+            c.type === "fake" ? "伪人" : c.type === "disguised" ? "伪装者（真人）" : "真人";
+          return `<div class="reveal-line">${c.name} — ${tag}</div>`;
+        })
+        .join("");
+
+      showOverlay("ending-modal");
+    }
+
+    function showOverlay(id) {
+      document.getElementById(id).classList.add("show");
+    }
+    function hideOverlay(id) {
+      document.getElementById(id).classList.remove("show");
+    }
+
+    document.getElementById("btn-observe").addEventListener("click", observeSelected);
+    document.getElementById("btn-ask").addEventListener("click", askSelected);
+    document.getElementById("btn-mark").addEventListener("click", toggleMarkSelected);
+    document.getElementById("btn-skip").addEventListener("click", endRound);
+    document.getElementById("btn-submit").addEventListener("click", openSubmit);
+    document.getElementById("btn-confirm-submit").addEventListener("click", confirmSubmit);
+    document.getElementById("btn-restart").addEventListener("click", startGame);
+    document.getElementById("dm-close").addEventListener("click", () => hideOverlay("detail-modal"));
+    document.getElementById("detail-modal").addEventListener("click", (e) => {
+      if (e.target.id === "detail-modal") hideOverlay("detail-modal");
+    });
+
+    startGame();
+  </script>
+</body>
+</html>
